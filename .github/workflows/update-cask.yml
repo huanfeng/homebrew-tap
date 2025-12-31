@@ -1,0 +1,81 @@
+name: Update Cask
+
+on:
+  repository_dispatch:
+    types: [update-cask]
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Release repo (owner/name)"
+        required: true
+      release_tag:
+        description: "Release tag (e.g. v1.2.3)"
+        required: true
+      version:
+        description: "Version (e.g. 1.2.3)"
+        required: true
+      dmg_name:
+        description: "DMG filename"
+        required: true
+      sha256:
+        description: "SHA256 for DMG"
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Cask
+        shell: bash
+        env:
+          REPO: ${{ github.event.client_payload.repo || inputs.repo }}
+          RELEASE_TAG: ${{ github.event.client_payload.release_tag || inputs.release_tag }}
+          VERSION: ${{ github.event.client_payload.version || inputs.version }}
+          DMG_NAME: ${{ github.event.client_payload.dmg_name || inputs.dmg_name }}
+          SHA256: ${{ github.event.client_payload.sha256 || inputs.sha256 }}
+        run: |
+          set -euo pipefail
+          python - << 'PY'
+          import os
+
+          repo = os.environ["REPO"]
+          release_tag = os.environ["RELEASE_TAG"]
+          version = os.environ["VERSION"]
+          dmg_name = os.environ["DMG_NAME"]
+          sha256 = os.environ["SHA256"]
+          cask_path = "Casks/apk-info-tool.rb"
+
+          content = f'''cask "apk-info-tool" do
+            version "{version}"
+            sha256 "{sha256}"
+
+            url "https://github.com/{repo}/releases/download/{release_tag}/{dmg_name}"
+            name "APK Info Tool"
+            homepage "https://github.com/huanfeng/ApkInfoTool"
+
+            app "apk_info_tool.app"
+          end
+          '''
+
+          os.makedirs(os.path.dirname(cask_path), exist_ok=True)
+          with open(cask_path, "w", encoding="utf-8") as f:
+            f.write(content)
+          PY
+
+      - name: Commit and Push
+        shell: bash
+        env:
+          VERSION: ${{ github.event.client_payload.version || inputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/apk-info-tool.rb
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Update apk-info-tool to ${VERSION}"
+          git push
