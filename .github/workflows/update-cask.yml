@@ -1,10 +1,18 @@
-name: Update Cask
+name: Update Homebrew
 
 on:
   repository_dispatch:
-    types: [update-cask]
+    types: [update-cask, update-formula]
   workflow_dispatch:
     inputs:
+      type:
+        description: "Update type (cask or formula)"
+        required: true
+        default: "cask"
+        type: choice
+        options:
+          - cask
+          - formula
       repo:
         description: "Release repo (owner/name)"
         required: true
@@ -15,15 +23,22 @@ on:
         description: "Version (e.g. 1.2.3)"
         required: true
       dmg_name:
-        description: "DMG filename"
-        required: true
-      sha256:
-        description: "SHA256 for DMG"
-        required: true
+        description: "DMG filename (for cask)"
+        required: false
+      dmg_sha256:
+        description: "SHA256 for DMG (for cask/formula macos)"
+        required: false
+      appimage_name:
+        description: "AppImage filename (for formula linux)"
+        required: false
+      appimage_sha256:
+        description: "SHA256 for AppImage (for formula linux)"
+        required: false
 
 jobs:
-  update:
+  update-cask:
     runs-on: ubuntu-latest
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'update-cask' || github.event_name == 'workflow_dispatch' && inputs.type == 'cask'
     steps:
       - uses: actions/checkout@v4
 
@@ -34,7 +49,7 @@ jobs:
           RELEASE_TAG: ${{ github.event.client_payload.release_tag || inputs.release_tag }}
           VERSION: ${{ github.event.client_payload.version || inputs.version }}
           DMG_NAME: ${{ github.event.client_payload.dmg_name || inputs.dmg_name }}
-          SHA256: ${{ github.event.client_payload.sha256 || inputs.sha256 }}
+          SHA256: ${{ github.event.client_payload.sha256 || inputs.dmg_sha256 }}
         run: |
           set -euo pipefail
           python - << 'PY'
@@ -77,5 +92,98 @@ jobs:
             echo "No changes to commit."
             exit 0
           fi
-          git commit -m "Update apk-info-tool to ${VERSION}"
+          git commit -m "Update apk-info-tool cask to ${VERSION}"
+          git push
+
+  update-formula:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'update-formula' || github.event_name == 'workflow_dispatch' && inputs.type == 'formula'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Formula
+        shell: bash
+        env:
+          REPO: ${{ github.event.client_payload.repo || inputs.repo }}
+          RELEASE_TAG: ${{ github.event.client_payload.release_tag || inputs.release_tag }}
+          VERSION: ${{ github.event.client_payload.version || inputs.version }}
+          DMG_NAME: ${{ github.event.client_payload.dmg_name || inputs.dmg_name }}
+          DMG_SHA256: ${{ github.event.client_payload.dmg_sha256 || inputs.dmg_sha256 }}
+          APPIMAGE_NAME: ${{ github.event.client_payload.appimage_name || inputs.appimage_name }}
+          APPIMAGE_SHA256: ${{ github.event.client_payload.appimage_sha256 || inputs.appimage_sha256 }}
+        run: |
+          set -euo pipefail
+          python - << 'PY'
+          import os
+
+          repo = os.environ["REPO"]
+          release_tag = os.environ["RELEASE_TAG"]
+          version = os.environ["VERSION"]
+          dmg_name = os.environ.get("DMG_NAME", "")
+          dmg_sha256 = os.environ.get("DMG_SHA256", "")
+          appimage_name = os.environ.get("APPIMAGE_NAME", "")
+          appimage_sha256 = os.environ.get("APPIMAGE_SHA256", "")
+          formula_path = "Formula/apk-info-tool.rb"
+
+          content = f'''class ApkInfoTool < Formula
+            desc "A simple tool for viewing APK/XAPK/APKM file information"
+            homepage "https://github.com/huanfeng/ApkInfoTool"
+            version "{version}"
+            license "MIT"
+
+            on_macos do
+              url "https://github.com/{repo}/releases/download/{release_tag}/{dmg_name}"
+              sha256 "{dmg_sha256}"
+
+              def install
+                prefix.install "apk_info_tool.app"
+                bin.write_exec_script prefix/"apk_info_tool.app/Contents/MacOS/apk_info_tool"
+              end
+            end
+
+            on_linux do
+              url "https://github.com/{repo}/releases/download/{release_tag}/{appimage_name}"
+              sha256 "{appimage_sha256}"
+
+              def install
+                bin.install "{appimage_name}" => "apk-info-tool"
+                chmod 0755, bin/"apk-info-tool"
+              end
+            end
+
+            def caveats
+              on_linux do
+                <<~EOS
+                  Note: This installs an AppImage. You may need FUSE to run it:
+                    sudo apt install fuse libfuse2  # Debian/Ubuntu
+                    sudo dnf install fuse fuse-libs # Fedora
+                EOS
+              end
+            end
+
+            test do
+              assert_predicate bin/"apk-info-tool", :exist?
+            end
+          end
+          '''
+
+          os.makedirs(os.path.dirname(formula_path), exist_ok=True)
+          with open(formula_path, "w", encoding="utf-8") as f:
+            f.write(content)
+          PY
+
+      - name: Commit and Push
+        shell: bash
+        env:
+          VERSION: ${{ github.event.client_payload.version || inputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/apk-info-tool.rb
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Update apk-info-tool formula to ${VERSION}"
           git push
