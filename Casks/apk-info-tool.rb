@@ -1,8 +1,8 @@
 cask "apk-info-tool" do
-  version "2.1.2"
-  sha256 "d4ee9d200d119734022b21d7ad2df58ecf2c14561c0eec94e2f09f6483e1891b"
+  version "2.1.3"
+  sha256 "3fbf52a812489f2c558fa0c990058e191eed6c3d1afb896f790fcffc8ebbdcf7"
 
-  url "https://github.com/huanfeng/ApkInfoTool/releases/download/v2.1.2/APKInfoTool-2.1.2.dmg"
+  url "https://github.com/huanfeng/ApkInfoTool/releases/download/v2.1.3/APKInfoTool-2.1.3.dmg"
   name "APK Info Tool"
   homepage "https://github.com/huanfeng/ApkInfoTool"
 
