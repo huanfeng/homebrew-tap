@@ -35,6 +35,10 @@ on:
         description: "SHA256 for AppImage (for formula linux)"
         required: false
 
+concurrency:
+  group: homebrew-tap-update
+  cancel-in-progress: false
+
 jobs:
   update-cask:
     runs-on: ubuntu-latest
@@ -93,6 +97,7 @@ jobs:
             exit 0
           fi
           git commit -m "Update apk-info-tool cask to ${VERSION}"
+          git pull --rebase
           git push
 
   update-formula:
@@ -186,4 +191,5 @@ jobs:
             exit 0
           fi
           git commit -m "Update apk-info-tool formula to ${VERSION}"
+          git pull --rebase
           git push
