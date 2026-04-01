@@ -1,12 +1,12 @@
 class ApkInfoTool < Formula
   desc "A simple tool for viewing APK/XAPK/APKM file information"
   homepage "https://github.com/huanfeng/ApkInfoTool"
-  version "2.1.0"
+  version "2.1.8"
   license "MIT"
 
   on_macos do
-    url "https://github.com/huanfeng/ApkInfoTool/releases/download/v2.1.0/APKInfoTool-2.1.0.dmg"
-    sha256 "66ff5acd324bd24f9bc2d52476546d5a88fb7218f79174f3493fd9726d584a5b"
+    url "https://github.com/huanfeng/ApkInfoTool/releases/download/v2.1.8/APKInfoTool-2.1.8.dmg"
+    sha256 "d93b42e017d3c135b2c9169e553a9a6270955cc6d27c381637949496a8dbaabe"
 
     def install
       prefix.install "apk_info_tool.app"
@@ -15,11 +15,11 @@ class ApkInfoTool < Formula
   end
 
   on_linux do
-    url "https://github.com/huanfeng/ApkInfoTool/releases/download/v2.1.0/APKInfoTool-2.1.0-x86_64.AppImage"
-    sha256 "8a0e3f1ab51495c92831ae6a56cacc66e746c71e447bf6ccc114ba4d03bbda38"
+    url "https://github.com/huanfeng/ApkInfoTool/releases/download/v2.1.8/APKInfoTool-2.1.8-x86_64.AppImage"
+    sha256 "7c7012323e1c840d990a013e6326fe8fc271dad83c061f4101531aaa5565aa57"
 
     def install
-      bin.install "APKInfoTool-2.1.0-x86_64.AppImage" => "apk-info-tool"
+      bin.install "APKInfoTool-2.1.8-x86_64.AppImage" => "apk-info-tool"
       chmod 0755, bin/"apk-info-tool"
     end
   end
